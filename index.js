@@ -1,8 +1,6 @@
 const app = require("./app");
 const { dbConnect } = require("./config/db");
 
-const dotenv = require("dotenv");
-dotenv.config({ path: "config/config.env" });
 // handling Uncaught Exception
 process.on("uncaughtException", (err) => {
   console.log(`Error: ${err.message}`);
