@@ -22,5 +22,5 @@ router
   .get(isAuthenticatedUser, authorizeRols("admin"), get_all_branch);
 
 //------------- user
-router.route("/branchs").get(get_branch);
+router.route("/branchs").get(isAuthenticatedUser,get_branch);
 module.exports = router;

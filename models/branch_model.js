@@ -21,6 +21,10 @@ const branchSchema = new mongoose.Schema({
     type: String,
     default: "Active",
   },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
   update_at: {
     type: Date,
     default: null,
