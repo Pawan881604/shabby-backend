@@ -48,9 +48,12 @@ exports.add_website = catchAsyncError(async (req, res, next) => {
 });
 
 exports.get_all_websites = catchAsyncError(async (req, res, next) => {
-  const resultPerpage = 10;
+  const resultPerpage = 25;
   const count_website = await website_model.countDocuments();
-
+  const active_count = await website_model.countDocuments({ status: "Active" });
+  const inactive_count = await website_model.countDocuments({
+    status: "Inactive",
+  });
   const apiFetures = new ApiFetures(website_model.find(), req.query)
     .search()
     .filter()
@@ -67,6 +70,8 @@ exports.get_all_websites = catchAsyncError(async (req, res, next) => {
     web_data,
     count_website,
     resultPerpage,
+    active_count,
+    inactive_count,
   });
 });
 

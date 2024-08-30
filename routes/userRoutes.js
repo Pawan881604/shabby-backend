@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   User,
- 
+
   getUserDetails,
   otpVerification,
   reSendOtp,
@@ -11,34 +11,39 @@ const {
   create_admin_user,
   user_password_reset,
   create_user,
+  update_admin_user,
 } = require("../controllers/userController");
 const { isAuthenticatedUser, authorizeRols } = require("../middleware/auth");
 const upload = require("../middleware/multer");
 const router = express.Router();
 
-router.route("/authenticate").post(User);
-
-router.route("/login").post(Login);
+//-----------------admin
 
 router
   .route("/edit-admin-user")
-  .post(isAuthenticatedUser,authorizeRols("admin"), create_admin_user)
-  .post(isAuthenticatedUser,authorizeRols("admin"), create_user)
-  .put(isAuthenticatedUser,authorizeRols("admin"),user_password_reset);
-  
-  router
-  .route("/edit-user")
-  .post(isAuthenticatedUser,authorizeRols("admin"), create_user)
-  
-router.route("/profie").get(isAuthenticatedUser, getUserDetails);
+  .post(isAuthenticatedUser, authorizeRols("admin","Manager"), create_admin_user)
+  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), user_password_reset);
 
 router
-  .route("/all-users")
-  .get(isAuthenticatedUser, authorizeRols("admin"), get_user);
+  .route("/edit-admin-user/:id")
+  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), update_admin_user);
+
+router
+  .route("/edit-user")
+  .post(isAuthenticatedUser, authorizeRols("admin","Manager"), create_user);
 
 router
   .route("/action-user/:id")
-  .put(isAuthenticatedUser, authorizeRols("admin"), update_user);
+  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), update_user);
+
+router
+  .route("/all-users")
+  .get(isAuthenticatedUser, authorizeRols("admin","Manager"), get_user);
+
+//-----------------users
+router.route("/authenticate").post(User);
+router.route("/login").post(Login);
+router.route("/profie").get(isAuthenticatedUser, getUserDetails);
 
 //----------------------------------------------------
 //------------OTP _____________________________________
@@ -46,7 +51,5 @@ router
 router.route("/otp").put(otpVerification);
 
 router.route("/resend-otp").get(reSendOtp);
-
-
 
 module.exports = router;

@@ -30,9 +30,10 @@ exports.add_branch = catchAsyncError(async (req, res, next) => {
 });
 
 exports.get_all_branch = catchAsyncError(async (req, res, next) => {
-  const resultPerpage = 10;
+  const resultPerpage = 25;
   const count_branch = await branch_model.countDocuments();
-
+  const active_count = await branch_model.countDocuments({ status: "Active" });
+  const inactive_count = await branch_model.countDocuments({ status: "Inactive" });
   const apiFetures = new ApiFetures(branch_model.find(), req.query)
     .search()
     .filter()
@@ -44,6 +45,8 @@ exports.get_all_branch = catchAsyncError(async (req, res, next) => {
     branch,
     count_branch,
     resultPerpage,
+    active_count,
+    inactive_count
   });
 });
 
@@ -86,7 +89,7 @@ exports.get_branch = catchAsyncError(async (req, res, next) => {
   ).filter();
 
   const branch = await apiFetures.query.sort({ updated_at: -1 });
-  const count_branch = branch.length;
+  const count_branch = await branch_model.countDocuments();
   res.status(200).json({
     success: true,
     branch,

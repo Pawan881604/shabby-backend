@@ -11,15 +11,15 @@ const router = express.Router();
 
 router
   .route("/action-branch")
-  .post(isAuthenticatedUser, authorizeRols("admin"), add_branch);
+  .post(isAuthenticatedUser, authorizeRols("admin","Manager"), add_branch);
 
 router
   .route("/action-branch/:id")
-  .put(isAuthenticatedUser, authorizeRols("admin"), update_branch);
+  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), update_branch);
 
 router
   .route("/branch")
-  .get(isAuthenticatedUser, authorizeRols("admin"), get_all_branch);
+  .get(isAuthenticatedUser, authorizeRols("admin","Manager"), get_all_branch);
 
 //------------- user
 router.route("/branchs").get(isAuthenticatedUser,get_branch);

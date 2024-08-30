@@ -4,26 +4,13 @@ const ErrorHandler = require("../utils/errorhandler");
 const { generate_Otp, verify_otp } = require("../utils/generatOtp");
 const sendToken = require("../utils/jwtToken");
 const ApiFetures = require("../utils/apiFeatuers");
-
-const {
-  sendOtpMail,
-  forgetPassOtpMail,
-  forget_password_mail,
-} = require("../utils/sendEmail");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-// const master_otp_model = require("../models/master_otp_model");
-const {
-  valid_email_or_no,
-  valid_login_email_or_no,
-} = require("../utils/validate_user");
+const { valid_email_or_no } = require("../utils/validate_user");
 const { generateRandomString } = require("../utils/generateRandomString");
-// const { mobile_otp } = require("../utils/mobile_sms");
-// const crypto = require('crypto')
 
 exports.Login = catchAsyncError(async (req, res, next) => {
   const { email, password } = req.body;
-
+  
   const is_valid_user = await valid_email_or_no(email);
   if (is_valid_user === "invalid") {
     return next(new ErrorHandler("Invalid phone number", 400));
@@ -36,7 +23,7 @@ exports.Login = catchAsyncError(async (req, res, next) => {
 
   const isPassMatch = await bcrypt.compare(password, isExist.password);
 
-  console.log(isPassMatch);
+
   if (!isPassMatch) {
     return next(new ErrorHandler("Invalid email or password", 400));
   }
@@ -44,20 +31,24 @@ exports.Login = catchAsyncError(async (req, res, next) => {
   sendToken(isExist, 200, res);
 });
 
+//________________ add admin user
 exports.create_admin_user = catchAsyncError(async (req, res, next) => {
-  const { email: useremail, uuid, password } = req.body;
+  const { user_data, uuid } = req.body;
+  const { email: useremail, password, name, status, role } = user_data;
+  const user_id = req.user._id;
   const email = useremail.toLowerCase();
   const random_id = generateRandomString(8);
+
   const is_valid_user = await valid_email_or_no(email);
   if (is_valid_user === "invalid") {
     return next(new ErrorHandler("Invalid email id", 400));
   }
 
   const isExist = await usermodel.findOne({ email });
-
   if (isExist) {
     return next(new ErrorHandler("Email id is exist", 400));
   }
+
   if (password.length < 8) {
     return next(
       new ErrorHandler("Password must be at least 8 characters long", 400)
@@ -69,114 +60,86 @@ exports.create_admin_user = catchAsyncError(async (req, res, next) => {
     user_id: `user_${random_id}${uuid}`,
     uuid,
     email,
+    name,
+    status,
     password: hashedPassword,
     is_verified: "Activate",
     authorize: "Yes",
-    role: "admin",
+    role,
+    user: user_id,
   };
-  let new_user = await usermodel.create(data);
-  const all_users = await usermodel.find();
-  const user_data = all_users.reverse();
+
+  const new_user = await usermodel.create(data);
+  if (!new_user) {
+    return next(new ErrorHandler("User is not created", 400));
+  }
+  const all_users = await usermodel
+    .find()
+    .populate({
+      path: "user",
+      model: "User",
+    })
+    .sort({ updated_at: -1 });
   res.status(200).json({
     success: true,
-    users: user_data,
+    users: all_users,
   });
 });
 
-exports.create_user = catchAsyncError(async (req, res, next) => {
-  const { phone_number, branches, uuid } = req.body;
-  const parse_branch = JSON.parse(branches);
-  const branch_ids = parse_branch.map((item) => item.id);
+//_____________________ Update Admin users
+
+exports.update_admin_user = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+  const { user_data } = req.body;
+  const { email: useremail, name, role, status, bio } = user_data;
   const user_id_ = req.user._id;
-  const random_id = generateRandomString(8);
-  const is_valid_user = await valid_email_or_no("", phone_number);
+  const email = useremail.toLowerCase();
+  const is_valid_user = await valid_email_or_no(email, "");
   if (is_valid_user === "invalid") {
-    return next(new ErrorHandler("Invalid phone no", 400));
+    return next(new ErrorHandler("Invalid email id", 400));
   }
   const isExist = await usermodel.findOne({
-    phone_number: phone_number,
-    _id: { $ne: user_id_ },
+    email: email,
+    user_id: { $ne: id },
   });
   if (isExist) {
-    return next(new ErrorHandler("Phone no is exist", 400));
+    return next(new ErrorHandler("Email is exist", 400));
   }
-
   const data = {
-    user_id: `user_${random_id}${uuid}`,
-    uuid,
-    phone_number,
-    branch: branch_ids,
-    is_verified: "Activate",
-    authorize: "Yes",
+    email,
+    name,
+    role,
+    status,
+    bio,
+    update_at: new Date(),
     user: user_id_,
   };
-  let new_user = await usermodel.create(data);
-  const all_users = await usermodel.find();
-  const user_data = all_users.reverse();
-  res.status(200).json({
-    success: true,
-    users: user_data,
+  const user = await usermodel.findOneAndUpdate({ user_id: id }, data, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
   });
-});
-
-//----- get users
-exports.get_user = catchAsyncError(async (req, res, next) => {
-  const resultPerpage = 10;
-  const count_users = await usermodel.countDocuments();
-
-  const apiFetures = new ApiFetures(usermodel.find(), req.query)
-    .search()
-    .filter()
-    .pagination(resultPerpage);
-  const users = await apiFetures.query;
-
-  res.status(200).json({
-    success: true,
-    users: users,
-    count_users: count_users,
-    resultPerpage: resultPerpage,
-  });
-});
-
-exports.update_user = catchAsyncError(async (req, res, next) => {
-  const { id } = req.params;
-  const { user_data, branches } = req.body;
-  const { phone } = user_data;
-  const user_id_ = req.user._id;
-  const is_valid_user = await valid_email_or_no("", phone);
-  if (is_valid_user === "invalid") {
-    return next(new ErrorHandler("Invalid phone no", 400));
+  if (!user) {
+    return next(new ErrorHandler("User not updated", 400));
   }
-  const isExist = await usermodel.findOne({
-    phone_number: phone,
-    _id: { $ne: user_id_ },
-  });
-  if (isExist) {
-    return next(new ErrorHandler("Phone no is exist", 400));
-  }
-  const parse_branch = JSON.parse(branches);
-  const branch_ids = parse_branch.map((item) => item.id);
-  const user = await usermodel.findOneAndUpdate(
-    { user_id: id },
-    { phone: phone, branch: branch_ids, update_at: new Date() },
-    {
-      new: true,
-      runValidators: true,
-      useFindAndModify: false,
-    }
-  );
-  const all_users = await usermodel.find();
-  const data = all_users.reverse();
+  const all_users = await usermodel
+    .find()
+    .populate({
+      path: "user",
+      model: "User",
+    })
+    .sort({ updated_at: -1 });
   res.status(200).json({
     success: true,
-    users: data,
+    users: all_users,
   });
 });
 
+//________________ reset admin password
 exports.user_password_reset = catchAsyncError(async (req, res, next) => {
   const { email: useremail, password } = req.body;
   const email = useremail.toLowerCase();
-
+  const user_id = req.user._id;
   // Check if the user exists
   const isexist = await usermodel.findOne({ email: email });
   if (!isexist) {
@@ -193,7 +156,7 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
   // Update the user's password
   const user = await usermodel.findOneAndUpdate(
     { user_id: isexist.user_id },
-    { password: hashedPassword, updated_at: new Date() }, // updated_at should be in camelCase for consistency
+    { password: hashedPassword, updated_at: new Date(), user: user_id }, // updated_at should be in camelCase for consistency
     {
       new: true,
       runValidators: true,
@@ -209,8 +172,6 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
     });
   }
 
-  console.log("User password updated:", user);
-
   // Send success response
   res.status(200).json({
     success: true,
@@ -218,14 +179,138 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
   });
 });
 
-//_________________________________user
-//-------otp veryfication
+//_____________________ add users
+exports.create_user = catchAsyncError(async (req, res, next) => {
+  const { phone_number, status, branches, uuid } = req.body;
+  const parse_branch = JSON.parse(branches);
+  const branch_ids = parse_branch.map((item) => item.id);
+  const user_id_ = req.user._id;
+  const random_id = generateRandomString(8);
 
-//--------------------Ragister user
+  const is_valid_user = await valid_email_or_no("", phone_number);
+  if (is_valid_user === "invalid") {
+    return next(new ErrorHandler("Invalid phone no", 400));
+  }
+
+  const isExist = await usermodel.findOne({ phone_number: phone_number });
+
+  if (isExist) {
+    return next(new ErrorHandler("Phone no is exist", 400));
+  }
+
+  const data = {
+    user_id: `user_${random_id}${uuid}`,
+    uuid,
+    phone_number,
+    branch: branch_ids,
+    is_verified: "Activate",
+    authorize: "Yes",
+    status,
+    user: user_id_,
+  };
+  let new_user = await usermodel.create(data);
+  if (!new_user) {
+    return next(new ErrorHandler("User is not added", 400));
+  }
+  const all_users = await usermodel
+    .find()
+    .populate({
+      path: "user",
+      model: "User",
+    })
+    .sort({ updated_at: -1 });
+
+  res.status(200).json({
+    success: true,
+    users: all_users,
+  });
+});
+
+//_____________________ get users
+exports.get_user = catchAsyncError(async (req, res, next) => {
+  const resultPerpage = 25;
+  const count_users = await usermodel.countDocuments();
+  const activeUsersCount = await usermodel.countDocuments({ status: "Active" });
+  const inactiveUsersCount = await usermodel.countDocuments({ status: "Inactive" });
+  const apiFetures = new ApiFetures(usermodel.find(), req.query)
+    .search()
+    .filter()
+    .pagination(resultPerpage);
+  const users = await apiFetures.query
+    .populate({
+      path: "user",
+      model: "User",
+    })
+    .sort({ updated_at: -1 });
+
+  res.status(200).json({
+    success: true,
+    users: users,
+    count_users: count_users,
+    resultPerpage: resultPerpage,
+    inactiveUsersCount,
+    activeUsersCount,
+  });
+});
+
+//_____________________ Update users
+exports.update_user = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+  const { user_data, branches } = req.body;
+  const { phone, status } = user_data;
+  const user_id_ = req.user._id;
+
+  const is_valid_user = await valid_email_or_no("", phone);
+  if (is_valid_user === "invalid") {
+    return next(new ErrorHandler("Invalid phone no", 400));
+  }
+  const isExist = await usermodel.findOne({
+    phone_number: phone,
+    user_id: { $ne: id },
+  });
+  if (isExist) {
+    return next(new ErrorHandler("Phone no is exist", 400));
+  }
+  const parse_branch = JSON.parse(branches);
+  const branch_ids = parse_branch.map((item) => item.id);
+  const user = await usermodel.findOneAndUpdate(
+    { user_id: id },
+    {
+      phone_number: phone,
+      branch: branch_ids,
+      update_at: new Date(),
+      user: user_id_,
+      status,
+    },
+    {
+      new: true,
+      runValidators: true,
+      useFindAndModify: false,
+    }
+  );
+  if (!user) {
+    return next(new ErrorHandler("User is not updated", 400));
+  }
+  const all_users = await usermodel
+    .find()
+    .populate({
+      path: "user",
+      model: "User",
+    })
+    .sort({ updated_at: -1 });
+  res.status(200).json({
+    success: true,
+    users: all_users,
+  });
+});
+
+//_________________________________user
+
+//========================usera
 
 exports.User = catchAsyncError(async (req, res, next) => {
   const { name, email, uuid, phone_number } = req.body;
-    
+
   const random_id = generateRandomString(8);
   const is_valid_user = await valid_email_or_no(email, phone_number);
   if (is_valid_user === "invalid") {

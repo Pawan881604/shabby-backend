@@ -12,7 +12,7 @@ router
   .route("/action-websites")
   .post(
     isAuthenticatedUser,
-    authorizeRols("admin"),
+    authorizeRols("admin","Manager"),
     upload.single("image"),
     add_website
   );
@@ -21,7 +21,7 @@ router
   .route("/action-website/:id")
   .put(
     isAuthenticatedUser,
-    authorizeRols("admin"),
+    authorizeRols("admin","Manager"),
     upload.single("image"),
     update_website
   );
