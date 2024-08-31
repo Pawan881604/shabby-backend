@@ -40,9 +40,11 @@ app.use((req, res, next) => {
 const userRouter = require("./routes/userRoutes");
 const branch_routs = require("./routes/branch_routs");
 const website_roues = require("./routes/website_roues");
+const offer_routs = require("./routes/offer_routs");
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1", branch_routs);
 app.use("/api/v1", website_roues);
+app.use("/api/v1", offer_routs);
 //-- Middleware for err
 const errMiddleware = require("./middleware/error");
 app.use(errMiddleware);
