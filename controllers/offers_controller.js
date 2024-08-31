@@ -7,13 +7,15 @@ const isValidURL = require("../utils/checkValidUrl");
 const { image_uploader } = require("../utils/image_uploader");
 
 exports.add_offers = catchAsyncError(async (req, res, next) => {
-  const { title, description, status, applicable_users, uuid } = req.body;
+  const { data_, ids, uuid } = req.body;
+  const { title, discription, status, valid_date } = data_;
+
   const user = req.user._id;
   const image_data = req.file;
   const random_id = generateRandomString(8);
 
   // Check if title and description are provided
-  if (!title || !description || !applicable_users) {
+  if (!title || !discription) {
     return next(new ErrorHandler("All fields are required", 400));
   }
   // Upload the image
@@ -24,28 +26,29 @@ exports.add_offers = catchAsyncError(async (req, res, next) => {
 
   const data = {
     title,
-    discription: description,
+    discription,
     image: image_status._id,
     uuid,
     status,
-    applicable_users,
+    valid_date: new Date(valid_date),
+    applicable_users: ids,
     offer_id: `offer_${random_id}${uuid}`,
     user,
   };
 
-  // const offer_data = await offers_model.create(data);
-  // if (!offer_data) {
-  //   return next(new ErrorHandler("Data not added", 404));
-  // }
-
+  const offer_data = await offers_model.create(data);
+  if (!offer_data) {
+    return next(new ErrorHandler("Data not added", 404));
+  }
+  console.log(offer_data);
   res.status(200).json({
     success: true,
   });
 });
 
-exports.get_all_websites = catchAsyncError(async (req, res, next) => {
+exports.get_all_offers = catchAsyncError(async (req, res, next) => {
   const resultPerpage = 25;
-  const count_website = await offers_model.countDocuments();
+  const count_ = await offers_model.countDocuments();
   const active_count = await offers_model.countDocuments({ status: "Active" });
   const inactive_count = await offers_model.countDocuments({
     status: "Inactive",
@@ -56,15 +59,21 @@ exports.get_all_websites = catchAsyncError(async (req, res, next) => {
     .pagination(resultPerpage);
 
   const offer_data = await apiFetures.query
-    .populate({
-      path: "user",
-      model: "User",
-    })
+    .populate([
+      {
+        path: "image",
+        model: "Images",
+      },
+      {
+        path: "user",
+        model: "User",
+      },
+    ])
     .sort({ updated_at: -1 });
   res.status(200).json({
     success: true,
     offer_data,
-    count_website,
+    count_,
     resultPerpage,
     active_count,
     inactive_count,
