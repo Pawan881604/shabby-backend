@@ -70,6 +70,7 @@ exports.get_all_offers = catchAsyncError(async (req, res, next) => {
       },
     ])
     .sort({ updated_at: -1 });
+    
   res.status(200).json({
     success: true,
     offer_data,
