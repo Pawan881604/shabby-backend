@@ -4,9 +4,10 @@ const website_model = require("../models/website_model");
 const { generateRandomString } = require("../utils/generateRandomString");
 const ApiFetures = require("../utils/apiFeatuers");
 const isValidURL = require("../utils/checkValidUrl");
+const { image_uploader } = require("../utils/image_uploader");
 
 exports.add_website = catchAsyncError(async (req, res, next) => {
-  const { title, description, link, status, image, uuid } = req.body;
+  const { title, description, link, status, uuid } = req.body;
   const user = req.user._id;
   const image_data = req.file;
   const random_id = generateRandomString(8);
@@ -22,12 +23,16 @@ exports.add_website = catchAsyncError(async (req, res, next) => {
   if (isexist) {
     return next(new ErrorHandler("Try with another link", 400));
   }
-
+  // Upload the image
+  const image_status = await image_uploader(image_data, user);
+  if (!image_status) {
+    return next(new ErrorHandler("Image not added", 400));
+  }
   const data = {
     link: link,
     title,
     discription: description,
-    image: image_data ? image_data.path : image,
+    image: image_status._id,
     uuid,
     status,
     website_id: `web_${random_id}${uuid}`,
@@ -48,7 +53,7 @@ exports.add_website = catchAsyncError(async (req, res, next) => {
 });
 
 exports.get_all_websites = catchAsyncError(async (req, res, next) => {
-  const resultPerpage = 25;
+  const resultPerpage = 10;
   const count_website = await website_model.countDocuments();
   const active_count = await website_model.countDocuments({ status: "Active" });
   const inactive_count = await website_model.countDocuments({
@@ -60,10 +65,16 @@ exports.get_all_websites = catchAsyncError(async (req, res, next) => {
     .pagination(resultPerpage);
 
   const web_data = await apiFetures.query
-    .populate({
-      path: "user",
-      model: "User",
-    })
+    .populate([
+      {
+        path: "image",
+        model: "Images",
+      },
+      {
+        path: "user",
+        model: "User",
+      },
+    ])
     .sort({ updated_at: -1 });
   res.status(200).json({
     success: true,
@@ -78,6 +89,7 @@ exports.get_all_websites = catchAsyncError(async (req, res, next) => {
 exports.update_website = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
   const { title, description, status, link, image } = req.body;
+
   const image_data = req.file;
   const user = req.user._id;
   // Check if the website ID is valid
@@ -104,12 +116,24 @@ exports.update_website = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Link already in use. Try another one.", 400));
   }
 
+  // Upload the image
+  let image_url;
+  if (image_data) {
+    const image_status = await image_uploader(image_data, user);
+    if (!image_status) {
+      return next(new ErrorHandler("Image not added", 400));
+    }
+    image_url = image_status._id;
+  } else {
+    image_url = image;
+  }
+
   // Prepare data for update
   const data = {
     title: title.trim(),
     discription: description.trim(),
     link: link.trim(),
-    image: image_data ? image_data.path : image,
+    image: image_url,
     update_at: new Date(),
     status,
     user,
