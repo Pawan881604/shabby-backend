@@ -10,7 +10,7 @@ const { generateRandomString } = require("../utils/generateRandomString");
 
 exports.Login = catchAsyncError(async (req, res, next) => {
   const { email, password } = req.body;
-  
+
   const is_valid_user = await valid_email_or_no(email);
   if (is_valid_user === "invalid") {
     return next(new ErrorHandler("Invalid phone number", 400));
@@ -22,7 +22,6 @@ exports.Login = catchAsyncError(async (req, res, next) => {
   }
 
   const isPassMatch = await bcrypt.compare(password, isExist.password);
-
 
   if (!isPassMatch) {
     return next(new ErrorHandler("Invalid email or password", 400));
@@ -182,6 +181,7 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
 //_____________________ add users
 exports.create_user = catchAsyncError(async (req, res, next) => {
   const { phone_number, status, branches, uuid } = req.body;
+  console.log(req.body)
   const parse_branch = JSON.parse(branches);
   const branch_ids = parse_branch.map((item) => item.id);
   const user_id_ = req.user._id;
@@ -231,16 +231,21 @@ exports.get_user = catchAsyncError(async (req, res, next) => {
   const resultPerpage = 25;
   const count_users = await usermodel.countDocuments();
   const activeUsersCount = await usermodel.countDocuments({ status: "Active" });
-  const inactiveUsersCount = await usermodel.countDocuments({ status: "Inactive" });
+  const inactiveUsersCount = await usermodel.countDocuments({
+    status: "Inactive",
+  });
   const apiFetures = new ApiFetures(usermodel.find(), req.query)
     .search()
     .filter()
     .pagination(resultPerpage);
   const users = await apiFetures.query
-    .populate({
+    .populate([{
       path: "user",
       model: "User",
-    })
+    },{
+      path: "branch",
+      model: "Branch",
+    }])
     .sort({ updated_at: -1 });
 
   res.status(200).json({
@@ -273,6 +278,7 @@ exports.update_user = catchAsyncError(async (req, res, next) => {
   }
   const parse_branch = JSON.parse(branches);
   const branch_ids = parse_branch.map((item) => item.id);
+
   const user = await usermodel.findOneAndUpdate(
     { user_id: id },
     {

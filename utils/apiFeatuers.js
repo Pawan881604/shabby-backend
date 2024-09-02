@@ -40,16 +40,11 @@ class ApiFetures {
     const removeField = ["keyword", "page", "limit"];
     removeField.forEach((key) => delete queryCopy[key]);
 
-    // Add discount filter
-    // if (queryCopy.discount) {
-    //     const discountPercentage = parseInt(queryCopy.discount); // Convert the discount to an integer
-    //     const discountValue = (discountPercentage / 100); // Convert percentage to a decimal value
+    if (queryCopy["user.role"]) {
+      this.query = this.query.find({ "role": queryCopy["user.role"] });
+      delete queryCopy["user.role"];
+    }
 
-    //     // Filter for products with a discount greater than or equal to the specified percentage
-    //     queryCopy.discount = { $gte: discountValue };
-    // }
-    // console.log(queryCopy)
-    // Filter price and ratings
     let queryStr = JSON.stringify(queryCopy);
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (key) => `$${key}`);
     console.log(queryStr);

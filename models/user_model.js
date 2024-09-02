@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
   },
   branch: [
     {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       default: null,
       ref: "Branch",
     },
