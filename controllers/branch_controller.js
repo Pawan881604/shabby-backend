@@ -7,25 +7,43 @@ const user_model = require("../models/user_model");
 
 exports.add_branch = catchAsyncError(async (req, res, next) => {
   const { branch_data, uuid } = req.body;
-  const { link, branch } = branch_data;
+
   const random_id = generateRandomString(8);
+  if (!branch_data || !uuid) {
+    return next(new ErrorHandler("All data are required", 400));
+  }
+
+  const { link, branch, status } = branch_data;
+
+  // Ensure link and branch are provided
+  if (!link || !branch) {
+    return next(new ErrorHandler("Branch link and name are required", 400));
+  }
+  const user = req.user._id;
+  if (!user) {
+    return next(new ErrorHandler("Authentication is required", 401));
+  }
+
   const isexist = await branch_model.findOne({ link: link });
 
   if (isexist) {
-    return next(new ErrorHandler("Try with another link", 400));
+    return next(
+      new ErrorHandler("Branch link already exists, try another link", 400)
+    );
   }
   const data = {
     link: link,
     branch: branch,
     branch_id: `bnh_${random_id}${uuid}`,
+    user,
+    status,
   };
   const branch_ = await branch_model.create(data);
-  const all_branch = await branch_model.find();
-  const data_rev = all_branch.reverse();
-
+  if (!branch_) {
+    return next(new ErrorHandler("Data not added", 400));
+  }
   res.status(200).json({
     success: true,
-    branch: data_rev,
   });
 });
 
@@ -33,7 +51,9 @@ exports.get_all_branch = catchAsyncError(async (req, res, next) => {
   const resultPerpage = 25;
   const count_branch = await branch_model.countDocuments();
   const active_count = await branch_model.countDocuments({ status: "Active" });
-  const inactive_count = await branch_model.countDocuments({ status: "Inactive" });
+  const inactive_count = await branch_model.countDocuments({
+    status: "Inactive",
+  });
   const apiFetures = new ApiFetures(branch_model.find(), req.query)
     .search()
     .filter()
@@ -46,33 +66,50 @@ exports.get_all_branch = catchAsyncError(async (req, res, next) => {
     count_branch,
     resultPerpage,
     active_count,
-    inactive_count
+    inactive_count,
   });
 });
 
 exports.update_branch = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
   const { branch_data } = req.body;
-  const { link, branch } = branch_data;
+  if (!branch_data) {
+    return next(new ErrorHandler("All data are required", 400));
+  }
+  const { link, branch, status } = branch_data;
+  if (!link || !branch) {
+    return next(new ErrorHandler("Branch link and name are required", 400));
+  }
+  const user = req.user._id;
+  if (!user) {
+    return next(new ErrorHandler("Authentication is required", 401));
+  }
+  const isexist = await branch_model.findOne({
+    link: link,
+    branch_id: { $ne: id },
+  });
+  if (isexist) {
+    return next(
+      new ErrorHandler("Branch link already exists, try another link", 400)
+    );
+  }
   const data = {
     link: link,
     branch: branch,
+    update_at: new Date(),
+    user,
+    status,
   };
   const branch_ = await branch_model.findOneAndUpdate({ branch_id: id }, data, {
     new: true,
     runValidators: true,
     useFindAndModify: false,
   });
-  if (branch_) {
-    branch_.update_at = new Date(); // No need for await here
-    await branch_.save(); // Save changes, if necessary
+  if (!branch_) {
+    return next(new ErrorHandler("Data not added", 400));
   }
-
-  const all_branch = await branch_model.find();
-  const all_data = all_branch.reverse();
   res.status(200).json({
     success: true,
-    branch: all_data,
   });
 });
 
