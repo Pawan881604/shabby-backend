@@ -54,12 +54,20 @@ exports.get_all_branch = catchAsyncError(async (req, res, next) => {
   const inactive_count = await branch_model.countDocuments({
     status: "Inactive",
   });
+
   const apiFetures = new ApiFetures(branch_model.find(), req.query)
     .search()
     .filter()
     .pagination(resultPerpage);
 
-  const branch = await apiFetures.query;
+  const branch = await apiFetures.query
+    .populate([
+      {
+        path: "user",
+        model: "User",
+      }
+    ])
+    .sort({ updated_at: -1 });
   res.status(200).json({
     success: true,
     branch,

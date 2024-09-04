@@ -21,24 +21,24 @@ const router = express.Router();
 
 router
   .route("/edit-admin-user")
-  .post(isAuthenticatedUser, authorizeRols("admin","Manager"), create_admin_user)
-  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), user_password_reset);
+  .post(isAuthenticatedUser, authorizeRols("admin","manager"), create_admin_user)
+  .put(isAuthenticatedUser, authorizeRols("admin","manager"), user_password_reset);
 
 router
   .route("/edit-admin-user/:id")
-  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), update_admin_user);
+  .put(isAuthenticatedUser, authorizeRols("admin","manager"), update_admin_user);
 
 router
   .route("/edit-user")
-  .post(isAuthenticatedUser, authorizeRols("admin","Manager"), create_user);
+  .post(isAuthenticatedUser, authorizeRols("admin","manager"), create_user);
 
 router
   .route("/action-user/:id")
-  .put(isAuthenticatedUser, authorizeRols("admin","Manager"), update_user);
+  .put(isAuthenticatedUser, authorizeRols("admin","manager"), update_user);
 
 router
   .route("/all-users")
-  .get(isAuthenticatedUser, authorizeRols("admin","Manager"), get_user);
+  .get(isAuthenticatedUser, authorizeRols("admin","manager"), get_user);
 
 //-----------------users
 router.route("/authenticate").post(User);

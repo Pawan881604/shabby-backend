@@ -9,13 +9,13 @@ class ApiFetures {
       ? {
           $or: [
             {
-              name: {
+              phone_number: {
                 $regex: this.queryStr.keyword,
                 $options: "i",
               },
             },
             {
-              product_name: {
+              branch: {
                 $regex: this.queryStr.keyword,
                 $options: "i",
               },
@@ -30,6 +30,7 @@ class ApiFetures {
         }
       : {};
     this.query = this.query.find({ ...keyword });
+     
     return this;
   }
 
@@ -47,7 +48,6 @@ class ApiFetures {
 
     let queryStr = JSON.stringify(queryCopy);
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (key) => `$${key}`);
-    console.log(queryStr);
     this.query = this.query.find(JSON.parse(queryStr));
 
     return this;

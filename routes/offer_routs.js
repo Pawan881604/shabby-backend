@@ -6,7 +6,7 @@ const {
   get_all_offer_slider,
   update_offer_slider,
 } = require("../controllers/offer_silder_controller");
-const { add_offers, get_all_offers } = require("../controllers/offers_controller");
+const { add_offers, get_all_offers, update_offer } = require("../controllers/offers_controller");
 const router = express.Router();
 
 router
@@ -34,12 +34,14 @@ router
     authorizeRols("admin", "Manager"),
     upload.single("image"),
     add_offers
-  );
-// .put(
-//   isAuthenticatedUser,
-//   authorizeRols("admin", "Manager"),
-//   update_offer_slider
-// );
+  )
+  router
+  .route("/action-offer/:id").put(
+  isAuthenticatedUser,
+  authorizeRols("admin", "Manager"),
+  upload.single("image"),
+  update_offer
+);
 router
   .route("/all-offer")
   .get(isAuthenticatedUser, authorizeRols("admin", "Manager"), get_all_offers);

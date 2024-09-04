@@ -65,12 +65,12 @@ exports.get_all_offers = catchAsyncError(async (req, res, next) => {
         model: "Images",
       },
       {
-        path: "user",
+        path: "applicable_users",
         model: "User",
       },
     ])
     .sort({ updated_at: -1 });
-    
+
   res.status(200).json({
     success: true,
     offer_data,
@@ -81,49 +81,48 @@ exports.get_all_offers = catchAsyncError(async (req, res, next) => {
   });
 });
 
-exports.update_website = catchAsyncError(async (req, res, next) => {
+exports.update_offer = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
-  const { title, description, status, link, image } = req.body;
+
+  const { data_, image, ids } = req.body;
+  const { title, discription, status, valid_date } = data_;
   const image_data = req.file;
   const user = req.user._id;
   // Check if the website ID is valid
   if (!id) {
-    return next(new ErrorHandler("Website ID is required", 400));
+    return next(new ErrorHandler("Offer ID is required", 400));
+  }
+  
+  if (!title || !discription || !valid_date || !status) {
+    return next(new ErrorHandler("All field are required", 400));
   }
 
-  // Check if the link is provided and is a valid URL
-  if (!isValidURL(link)) {
-    return next(new ErrorHandler("Invalid website link", 400));
+  let image_ids;
+  if (image_data) {
+    const image_status = await image_uploader(image_data, user);
+    if (!image_status) {
+      return next(new ErrorHandler("Image not added", 400));
+    }
+    image_ids = image_status._id;
+  } else {
+    image_ids = image;
   }
 
-  // Check if title and description are provided
-  if (!title || !description) {
-    return next(new ErrorHandler("Title and description are required", 400));
-  }
-
-  // Check if the link already exists for another website
-  const isExist = await offers_model.findOne({
-    link: link,
-    website_id: { $ne: id },
-  });
-  if (isExist) {
-    return next(new ErrorHandler("Link already in use. Try another one.", 400));
-  }
 
   // Prepare data for update
   const data = {
-    title: title.trim(),
-    discription: description.trim(),
-    link: link.trim(),
-    image: image_data ? image_data.path : image,
-    update_at: new Date(),
+    title,
+    discription,
+    image: image_ids,
     status,
+    valid_date: new Date(valid_date),
+    applicable_users: ids,
+    update_at: new Date(),
     user,
   };
 
-  // Update the website entry
-  const website_ = await offers_model.findOneAndUpdate(
-    { website_id: id },
+  const offer_ = await offers_model.findOneAndUpdate(
+    { _id: id },
     data,
     {
       new: true,
@@ -131,17 +130,13 @@ exports.update_website = catchAsyncError(async (req, res, next) => {
       useFindAndModify: false,
     }
   );
-  // Check if the website was found and updated
-  if (!website_) {
+  // // Check if the website was found and updated
+  if (!offer_) {
     return next(new ErrorHandler("Data not Updated", 404));
   }
 
-  // Fetch all websites after update
-  const all_web = await offers_model.find().sort({ updated_at: -1 });
-
+console.log(offer_)
   res.status(200).json({
     success: true,
-    message: "Website updated successfully",
-    web_data: all_web,
   });
 });

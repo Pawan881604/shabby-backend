@@ -82,7 +82,7 @@ exports.get_all_offer_slider = catchAsyncError(async (req, res, next) => {
 
 exports.update_offer_slider = catchAsyncError(async (req, res, next) => {
   const { status, id } = req.body;
-  console.log(req.body);
+
   const user = req.user._id;
   if (!id) {
     return next(new ErrorHandler("Offer slider ID is required", 400));

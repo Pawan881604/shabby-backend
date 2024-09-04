@@ -72,16 +72,9 @@ exports.create_admin_user = catchAsyncError(async (req, res, next) => {
   if (!new_user) {
     return next(new ErrorHandler("User is not created", 400));
   }
-  const all_users = await usermodel
-    .find()
-    .populate({
-      path: "user",
-      model: "User",
-    })
-    .sort({ updated_at: -1 });
+
   res.status(200).json({
     success: true,
-    users: all_users,
   });
 });
 
@@ -121,16 +114,9 @@ exports.update_admin_user = catchAsyncError(async (req, res, next) => {
   if (!user) {
     return next(new ErrorHandler("User not updated", 400));
   }
-  const all_users = await usermodel
-    .find()
-    .populate({
-      path: "user",
-      model: "User",
-    })
-    .sort({ updated_at: -1 });
+
   res.status(200).json({
     success: true,
-    users: all_users,
   });
 });
 
@@ -180,10 +166,8 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
 
 //_____________________ add users
 exports.create_user = catchAsyncError(async (req, res, next) => {
-  const { phone_number, status, branches, uuid } = req.body;
-  console.log(req.body)
-  const parse_branch = JSON.parse(branches);
-  const branch_ids = parse_branch.map((item) => item.id);
+  const { phone_number, status, ids, uuid } = req.body;
+
   const user_id_ = req.user._id;
   const random_id = generateRandomString(8);
 
@@ -202,7 +186,7 @@ exports.create_user = catchAsyncError(async (req, res, next) => {
     user_id: `user_${random_id}${uuid}`,
     uuid,
     phone_number,
-    branch: branch_ids,
+    branch_id: ids,
     is_verified: "Activate",
     authorize: "Yes",
     status,
@@ -212,17 +196,9 @@ exports.create_user = catchAsyncError(async (req, res, next) => {
   if (!new_user) {
     return next(new ErrorHandler("User is not added", 400));
   }
-  const all_users = await usermodel
-    .find()
-    .populate({
-      path: "user",
-      model: "User",
-    })
-    .sort({ updated_at: -1 });
 
   res.status(200).json({
     success: true,
-    users: all_users,
   });
 });
 
@@ -234,34 +210,41 @@ exports.get_user = catchAsyncError(async (req, res, next) => {
   const inactiveUsersCount = await usermodel.countDocuments({
     status: "Inactive",
   });
-  const apiFetures = new ApiFetures(usermodel.find(), req.query)
-    .search()
-    .filter()
-    .pagination(resultPerpage);
-  const users = await apiFetures.query
-    .populate([{
-      path: "user",
-      model: "User",
-    },{
-      path: "branch",
-      model: "Branch",
-    }])
-    .sort({ updated_at: -1 });
+  try {
+    const apiFetures = new ApiFetures(usermodel.find(), req.query)
+      .search()
+      .filter()
+      .pagination(resultPerpage);
+    const users = await apiFetures.query
+      .populate([
+        {
+          path: "user",
+          model: "User",
+        },
+        {
+          path: "branch_id",
+          model: "Branch",
+        },
+      ])
+      .sort({ updated_at: -1 });
 
-  res.status(200).json({
-    success: true,
-    users: users,
-    count_users: count_users,
-    resultPerpage: resultPerpage,
-    inactiveUsersCount,
-    activeUsersCount,
-  });
+    res.status(200).json({
+      success: true,
+      users: users,
+      count_users: count_users,
+      resultPerpage: resultPerpage,
+      inactiveUsersCount,
+      activeUsersCount,
+    });
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 //_____________________ Update users
 exports.update_user = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
-  const { user_data, branches } = req.body;
+  const { user_data, ids } = req.body;
   const { phone, status } = user_data;
   const user_id_ = req.user._id;
 
@@ -276,14 +259,12 @@ exports.update_user = catchAsyncError(async (req, res, next) => {
   if (isExist) {
     return next(new ErrorHandler("Phone no is exist", 400));
   }
-  const parse_branch = JSON.parse(branches);
-  const branch_ids = parse_branch.map((item) => item.id);
 
   const user = await usermodel.findOneAndUpdate(
     { user_id: id },
     {
       phone_number: phone,
-      branch: branch_ids,
+      branch_id: ids,
       update_at: new Date(),
       user: user_id_,
       status,
