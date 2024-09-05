@@ -79,10 +79,14 @@ userSchema.pre("save", async function (next) {
   if (!this.isNew) {
     return next();
   }
+
   try {
+    
+    // Hash the password
     if (this.isModified("password")) {
       this.password = await bcrypt.hash(this.password, 10);
     }
+
     next();
   } catch (err) {
     next(err);
@@ -100,5 +104,4 @@ userSchema.methods.getJWTtoken = function () {
 userSchema.methods.comparePassword = async function (pass) {
   return await bcrypt.compare(pass, this.password);
 };
-
 module.exports = mongoose.model("User", userSchema);

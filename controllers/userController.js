@@ -9,8 +9,8 @@ const { valid_email_or_no } = require("../utils/validate_user");
 const { generateRandomString } = require("../utils/generateRandomString");
 
 exports.Login = catchAsyncError(async (req, res, next) => {
-  const { email, password } = req.body;
-
+  const { email: useremail, password } = req.body;
+  const email = useremail.toLowerCase();
   const is_valid_user = await valid_email_or_no(email);
   if (is_valid_user === "invalid") {
     return next(new ErrorHandler("Invalid phone number", 400));
@@ -18,13 +18,21 @@ exports.Login = catchAsyncError(async (req, res, next) => {
   const isExist = await usermodel.findOne({ email });
 
   if (!isExist) {
-    return next(new ErrorHandler("Please valid email and password", 400));
+    return next(new ErrorHandler("Please valid email or password", 400));
   }
 
-  const isPassMatch = await bcrypt.compare(password, isExist.password);
+  const isPasswordMatched = await isExist.comparePassword(password);
 
-  if (!isPassMatch) {
-    return next(new ErrorHandler("Invalid email or password", 400));
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Invalid valid email or password", 401));
+  }
+  if (isExist.status !== "Active") {
+    return next(
+      new ErrorHandler(
+        `Invalid email or password. If you believe this is a mistake, please contact the admin for this ${email}.`,
+        401
+      )
+    );
   }
 
   sendToken(isExist, 200, res);
@@ -48,9 +56,9 @@ exports.create_admin_user = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Email id is exist", 400));
   }
 
-  if (password.length < 8) {
+  if (password.length < 6) {
     return next(
-      new ErrorHandler("Password must be at least 8 characters long", 400)
+      new ErrorHandler("Password must be at least 6 characters long", 400)
     );
   }
   const saltRounds = 10;
@@ -61,7 +69,7 @@ exports.create_admin_user = catchAsyncError(async (req, res, next) => {
     email,
     name,
     status,
-    password: hashedPassword,
+    password,
     is_verified: "Activate",
     authorize: "Yes",
     role,
@@ -123,6 +131,7 @@ exports.update_admin_user = catchAsyncError(async (req, res, next) => {
 //________________ reset admin password
 exports.user_password_reset = catchAsyncError(async (req, res, next) => {
   const { email: useremail, password } = req.body;
+  
   const email = useremail.toLowerCase();
   const user_id = req.user._id;
   // Check if the user exists
@@ -156,7 +165,7 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
       message: "Password reset failed",
     });
   }
-
+console.log(user)
   // Send success response
   res.status(200).json({
     success: true,
@@ -207,38 +216,42 @@ exports.get_user = catchAsyncError(async (req, res, next) => {
   const resultPerpage = 25;
   const count_users = await usermodel.countDocuments();
   const activeUsersCount = await usermodel.countDocuments({ status: "Active" });
+  const normal_user_count = await usermodel.countDocuments({ role: "user" });
+  const admin_user_count = await usermodel.countDocuments({
+    role: { $ne: "user" },
+  });
+
   const inactiveUsersCount = await usermodel.countDocuments({
     status: "Inactive",
   });
-  try {
-    const apiFetures = new ApiFetures(usermodel.find(), req.query)
-      .search()
-      .filter()
-      .pagination(resultPerpage);
-    const users = await apiFetures.query
-      .populate([
-        {
-          path: "user",
-          model: "User",
-        },
-        {
-          path: "branch_id",
-          model: "Branch",
-        },
-      ])
-      .sort({ updated_at: -1 });
 
-    res.status(200).json({
-      success: true,
-      users: users,
-      count_users: count_users,
-      resultPerpage: resultPerpage,
-      inactiveUsersCount,
-      activeUsersCount,
-    });
-  } catch (err) {
-    console.log(err);
-  }
+  const apiFetures = new ApiFetures(usermodel.find(), req.query)
+    .search()
+    .filter()
+    .pagination(resultPerpage);
+  const users = await apiFetures.query
+    .populate([
+      {
+        path: "user",
+        model: "User",
+      },
+      {
+        path: "branch_id",
+        model: "Branch",
+      },
+    ])
+    .sort({ updated_at: -1 });
+
+  res.status(200).json({
+    success: true,
+    users: users,
+    count_users: count_users,
+    resultPerpage: resultPerpage,
+    inactiveUsersCount,
+    activeUsersCount,
+    normal_user_count,
+    admin_user_count,
+  });
 });
 
 //_____________________ Update users

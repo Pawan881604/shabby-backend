@@ -15,13 +15,13 @@ class ApiFetures {
               },
             },
             {
-              branch: {
+              email: {
                 $regex: this.queryStr.keyword,
                 $options: "i",
               },
             },
             {
-              title: {
+              branch: {
                 $regex: this.queryStr.keyword,
                 $options: "i",
               },
@@ -30,7 +30,7 @@ class ApiFetures {
         }
       : {};
     this.query = this.query.find({ ...keyword });
-     
+
     return this;
   }
 
@@ -42,7 +42,7 @@ class ApiFetures {
     removeField.forEach((key) => delete queryCopy[key]);
 
     if (queryCopy["user.role"]) {
-      this.query = this.query.find({ "role": queryCopy["user.role"] });
+      this.query = this.query.find({ role: queryCopy["user.role"] });
       delete queryCopy["user.role"];
     }
 
