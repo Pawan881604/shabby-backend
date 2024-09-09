@@ -53,7 +53,7 @@ exports.add_website = catchAsyncError(async (req, res, next) => {
 });
 
 exports.get_all_websites = catchAsyncError(async (req, res, next) => {
-  const resultPerpage = 25;
+  const resultPerpage = 10;
   const count_website = await website_model.countDocuments();
   const active_count = await website_model.countDocuments({ status: "Active" });
   const inactive_count = await website_model.countDocuments({
@@ -77,6 +77,8 @@ exports.get_all_websites = catchAsyncError(async (req, res, next) => {
       },
     ])
     .sort({ updated_at: -1 });
+
+    console.log(req.query)
   res.status(200).json({
     success: true,
     web_data,

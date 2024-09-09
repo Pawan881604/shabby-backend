@@ -15,6 +15,12 @@ class ApiFetures {
               },
             },
             {
+              status: {
+                $regex: this.queryStr.keyword,
+                $options: "i",
+              },
+            },
+            {
               email: {
                 $regex: this.queryStr.keyword,
                 $options: "i",
