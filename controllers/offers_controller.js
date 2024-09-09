@@ -140,3 +140,53 @@ console.log(offer_)
     success: true,
   });
 });
+
+
+exports.get_app_offers = catchAsyncError(async (req, res, next) => {
+  const resultPerpage = 25;
+  const userId = req.user._id;
+  console.log(req.query)
+  let query = offers_model.find();
+  if (userId) {
+    // For a logged-in user, show applicable special offers or general offers
+    query = query.find({
+      $or: [
+        { applicable_users: { $in: [userId] } }, // Special offers for this user
+        { applicable_users: { $exists: false } }, // General offers for all users
+        { applicable_users: { $size: 0 } }, // Offers with an empty applicable_users array
+      ],
+    });
+  } else {
+    // For non-logged-in users (or normal users), show only general offers
+    query = query.find({
+      $or: [
+        { applicable_users: { $exists: false } }, // Offers for all users
+        { applicable_users: { $size: 0 } }, // Offers with an empty applicable_users array
+      ],
+    });
+  }
+
+  const apiFetures = new ApiFetures(query, req.query)
+    .search()
+    .filter()
+    .pagination(resultPerpage);
+
+  const offer_data = await apiFetures.query
+    // .populate([
+    //   {
+    //     path: "image",
+    //     model: "Images",
+    //   },
+    //   {
+    //     path: "applicable_users",
+    //     model: "User",
+    //   },
+    // ])
+    // .sort({ updated_at: -1 });
+    // console.log(offer_data)
+
+  res.status(200).json({
+    success: true,
+    offer_data,
+  });
+});
