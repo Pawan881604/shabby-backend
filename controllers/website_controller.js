@@ -78,7 +78,7 @@ exports.get_all_websites = catchAsyncError(async (req, res, next) => {
     ])
     .sort({ updated_at: -1 });
 
-  console.log(req.query);
+  
   res.status(200).json({
     success: true,
     web_data,

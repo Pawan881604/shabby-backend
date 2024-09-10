@@ -40,7 +40,7 @@ exports.add_offers = catchAsyncError(async (req, res, next) => {
   if (!offer_data) {
     return next(new ErrorHandler("Data not added", 404));
   }
-  console.log(offer_data);
+
   res.status(200).json({
     success: true,
   });
@@ -92,7 +92,7 @@ exports.update_offer = catchAsyncError(async (req, res, next) => {
   if (!id) {
     return next(new ErrorHandler("Offer ID is required", 400));
   }
-  
+
   if (!title || !discription || !valid_date || !status) {
     return next(new ErrorHandler("All field are required", 400));
   }
@@ -108,7 +108,6 @@ exports.update_offer = catchAsyncError(async (req, res, next) => {
     image_ids = image;
   }
 
-
   // Prepare data for update
   const data = {
     title,
@@ -121,31 +120,25 @@ exports.update_offer = catchAsyncError(async (req, res, next) => {
     user,
   };
 
-  const offer_ = await offers_model.findOneAndUpdate(
-    { _id: id },
-    data,
-    {
-      new: true,
-      runValidators: true,
-      useFindAndModify: false,
-    }
-  );
+  const offer_ = await offers_model.findOneAndUpdate({ _id: id }, data, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
   // // Check if the website was found and updated
   if (!offer_) {
     return next(new ErrorHandler("Data not Updated", 404));
   }
 
-console.log(offer_)
   res.status(200).json({
     success: true,
   });
 });
 
-
 exports.get_app_offers = catchAsyncError(async (req, res, next) => {
   const resultPerpage = 25;
   const userId = req.user._id;
-  console.log(req.query)
+
   let query = offers_model.find();
   if (userId) {
     // For a logged-in user, show applicable special offers or general offers
@@ -171,19 +164,18 @@ exports.get_app_offers = catchAsyncError(async (req, res, next) => {
     .filter()
     .pagination(resultPerpage);
 
-  const offer_data = await apiFetures.query
-    // .populate([
-    //   {
-    //     path: "image",
-    //     model: "Images",
-    //   },
-    //   {
-    //     path: "applicable_users",
-    //     model: "User",
-    //   },
-    // ])
-    // .sort({ updated_at: -1 });
-    // console.log(offer_data)
+  const offer_data = await apiFetures.query;
+  // .populate([
+  //   {
+  //     path: "image",
+  //     model: "Images",
+  //   },
+  //   {
+  //     path: "applicable_users",
+  //     model: "User",
+  //   },
+  // ])
+  // .sort({ updated_at: -1 });
 
   res.status(200).json({
     success: true,

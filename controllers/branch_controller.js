@@ -65,7 +65,7 @@ exports.get_all_branch = catchAsyncError(async (req, res, next) => {
       {
         path: "user",
         model: "User",
-      }
+      },
     ])
     .sort({ updated_at: -1 });
   res.status(200).json({
@@ -126,14 +126,16 @@ exports.update_branch = catchAsyncError(async (req, res, next) => {
 exports.get_branch = catchAsyncError(async (req, res, next) => {
   const resultPerpage = 10;
   const user_id = req.user._id;
+  console.log(user_id)
   const user = await user_model.findById(user_id);
+  console.log(user);
   const user_branch = user.branch;
   const apiFetures = new ApiFetures(
     branch_model.find({ branch_id: { $in: user_branch } }),
     req.query
   ).filter();
-
   const branch = await apiFetures.query.sort({ updated_at: -1 });
+  console.log(branch)
   const count_branch = await branch_model.countDocuments();
   res.status(200).json({
     success: true,

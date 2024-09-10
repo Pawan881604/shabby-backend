@@ -165,7 +165,7 @@ exports.user_password_reset = catchAsyncError(async (req, res, next) => {
       message: "Password reset failed",
     });
   }
-console.log(user)
+
   // Send success response
   res.status(200).json({
     success: true,
